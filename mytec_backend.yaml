@@ -1,0 +1,188 @@
+openapi: 3.0.0
+info:
+  title: MyTEC Event Platform API
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000/api
+
+paths:
+  /events:
+    get:
+      summary: 取得活動列表
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+        - in: query
+          name: filter
+          schema: { type: string }
+      responses:
+        '200':
+          description: 活動列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+
+  /events/{id}:
+    get:
+      summary: 取得單一活動詳情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 活動詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+
+  /categories:
+    get:
+      summary: 取得所有分類
+      responses:
+        '200':
+          description: 分類列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /users/{id}:
+    get:
+      summary: 取得會員資料
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 會員資料
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /users/{id}/membercard:
+    get:
+      summary: 取得會員卡資訊
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 會員卡資訊
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemberCard'
+
+  /notifications:
+    get:
+      summary: 取得通知列表
+      responses:
+        '200':
+          description: 通知列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/{id}:
+    get:
+      summary: 取得通知詳情
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 通知詳情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+
+  /events/{id}/guests:
+    get:
+      summary: 取得活動來賓名單
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 來賓名單
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Guest'
+
+components:
+  schemas:
+    Event:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        date: { type: string }
+        location: { type: string }
+        category: { type: string }
+        image: { type: string }
+        description: { type: string }
+    Category:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        avatar: { type: string }
+    MemberCard:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        qrCode: { type: string }
+        level: { type: string }
+    Notification:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+    Guest:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        isVIP: { type: boolean }
+        checkedIn: { type: boolean }

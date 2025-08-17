@@ -1,0 +1,27 @@
+{
+  "name": "adminjs-mongoose",
+  "version": "1.0.0",
+  "description": "AdminJS with Mongoose",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Keith",
+  "license": "MIT",
+  "dependencies": {
+    "@adminjs/express": "^4.0.1",
+    "@adminjs/mongoose": "^4.1.0",
+    "@adminjs/upload": "^4.0.2",
+    "adminjs": "^7.8.16",
+    "bcryptjs": "^3.0.2",
+    "bootstrap": "^5.3.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.0",
+    "multer": "^2.0.1",
+    "react-bootstrap": "^2.10.2",
+    "stripe": "^18.3.0"
+  }
+}
