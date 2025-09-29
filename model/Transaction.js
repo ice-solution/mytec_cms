@@ -4,6 +4,7 @@ const transactionSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
   event_ticket: { type: mongoose.Schema.Types.ObjectId, ref: 'EventTicket', required: true },
+  quantity: { type: Number, default: 1 },
   amount: { type: Number, required: true },
   currency: { type: String, default: 'HKD' },
   purchase_date: { type: Date, default: Date.now },

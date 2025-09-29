@@ -25,23 +25,23 @@ function Sidebar() {
       <div className="sidebar-heading">Management</div>
       <li className="nav-item">
         <Link className="nav-link" to="/events">
-          <i className="fas fa-calendar"></i>
+          <i className="fas fa-calendar-alt"></i>
           <span>Events</span></Link>
       </li>
       <li className="nav-item">
         <Link className="nav-link" to="/categories">
-          <i className="fas fa-list"></i>
+          <i className="fas fa-tags"></i>
           <span>Categories</span></Link>
       </li>
       <li className="nav-item">
         <Link className="nav-link" to="/users">
-          <i className="fas fa-users"></i>
+          <i className="fas fa-user-friends"></i>
           <span>Users</span></Link>
       </li>
       <li className="nav-item">
-        <Link className="nav-link" to="/notifications">
-          <i className="fas fa-bell"></i>
-          <span>Notifications</span></Link>
+        <Link className="nav-link" to="/subscriptions">
+          <i className="fas fa-mail-bulk"></i>
+          <span>Subscriptions</span></Link>
       </li>
       {/* Divider */}
       <hr className="sidebar-divider d-none d-md-block" />

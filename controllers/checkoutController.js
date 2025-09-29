@@ -12,12 +12,23 @@ const checkoutController = {
   createCheckout: async (req, res) => {
     try {
       const { userId, eventId, ticketId, quantity = 1, success_url, cancel_url } = req.body;
-      // 取得票券資料
+      
+      // 1) 檢查 checkout 資料
+      if (!userId || !eventId || !ticketId) {
+        return res.status(400).json({ error: 'Missing required fields: userId, eventId, ticketId' });
+      }
+      
+      // 取得票券和事件資料
       const ticket = await EventTicket.findById(ticketId);
       if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+      
       const event = await Event.findById(eventId);
       if (!event) return res.status(404).json({ error: 'Event not found' });
-      // 建立 Stripe Session
+      
+      const user = await User.findById(userId);
+      if (!user) return res.status(404).json({ error: 'User not found' });
+      
+      // 2) 建立 Stripe Session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items: [
@@ -26,7 +37,7 @@ const checkoutController = {
               currency: 'hkd',
               product_data: {
                 name: `${event.title} - ${ticket.ticket_name}`,
-                description: event.description || '',
+                ...(event.description && { description: event.description }),
               },
               unit_amount: Math.round(ticket.cost * 100),
             },
@@ -39,21 +50,33 @@ const checkoutController = {
         metadata: {
           userId,
           eventId,
-          ticketId
+          ticketId,
+          quantity: quantity.toString()
         }
       });
-      // 建立交易記錄（pending）
-      await Transaction.create({
+      
+      // 3) MongoDB 記下 transaction record 並把 status 設為 pending
+      const transaction = await Transaction.create({
         user: userId,
         event: eventId,
         event_ticket: ticketId,
         amount: ticket.cost * quantity,
         currency: 'HKD',
         status: 'pending',
-        stripe_session_id: session.id
+        stripe_session_id: session.id,
+        quantity: quantity
       });
-      res.json({ url: session.url });
+      
+      // 4) 發送 session_id + payment url 給前台
+      res.json({ 
+        session_id: session.id,
+        payment_url: session.url,
+        transaction_id: transaction._id,
+        amount: ticket.cost * quantity,
+        currency: 'HKD'
+      });
     } catch (err) {
+      console.error('Checkout error:', err);
       res.status(500).json({ error: err.message });
     }
   },

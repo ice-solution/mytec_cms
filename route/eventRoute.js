@@ -26,6 +26,8 @@ const upload = multer({ storage, fileFilter })
 router.get('/', eventController.getAllEvents)
 router.get('/search', eventController.searchEvents)
 router.get('/me', eventController.getMyEvents)
+// 獲取特定事件的訂單列表
+router.get('/:eventId/orders', eventController.getEventOrders)
 // SEO-friendly route: /events/:categorySlug/:eventSlug
 router.get('/:categorySlug/:eventSlug', eventController.getEventBySlug)
 router.get('/:id', eventController.getEventById)

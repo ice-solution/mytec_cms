@@ -33,6 +33,15 @@ function EventDetails() {
   });
   const [editingTicket, setEditingTicket] = useState(false);
 
+  // Orders 相關狀態
+  const [orders, setOrders] = useState([]);
+  const [ordersStats, setOrdersStats] = useState({});
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [showOrdersOverlay, setShowOrdersOverlay] = useState(false);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersStatusFilter, setOrdersStatusFilter] = useState('');
+  const [ordersPagination, setOrdersPagination] = useState({});
+
   // 取得事件詳情
   const fetchEvent = async () => {
     try {
@@ -78,6 +87,30 @@ function EventDetails() {
       setTickets(data);
     } catch (error) {
       console.error('Error fetching tickets:', error);
+    }
+  };
+
+  // 取得訂單列表
+  const fetchOrders = async (page = 1, status = '') => {
+    if (!id) return;
+    try {
+      setOrdersLoading(true);
+      let url = `${API_URL}/${id}/orders?page=${page}&limit=10`;
+      if (status) {
+        url += `&status=${status}`;
+      }
+      
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      setOrders(data.orders || []);
+      setOrdersStats(data.stats || {});
+      setOrdersPagination(data.pagination || {});
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      alert('無法載入訂單列表');
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
@@ -274,6 +307,45 @@ function EventDetails() {
     }
   };
 
+  // Orders 相關函數
+  const handleShowOrders = () => {
+    setShowOrdersOverlay(true);
+    setOrdersPage(1);
+    setOrdersStatusFilter('');
+    fetchOrders(1, '');
+  };
+
+  const handleOrdersStatusFilter = (status) => {
+    setOrdersStatusFilter(status);
+    setOrdersPage(1);
+    fetchOrders(1, status);
+  };
+
+  const handleOrdersPageChange = (newPage) => {
+    setOrdersPage(newPage);
+    fetchOrders(newPage, ordersStatusFilter);
+  };
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'paid': return 'badge bg-success';
+      case 'pending': return 'badge bg-warning';
+      case 'failed': return 'badge bg-danger';
+      case 'refund': return 'badge bg-secondary';
+      default: return 'badge bg-light text-dark';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'paid': return '已付款';
+      case 'pending': return '待付款';
+      case 'failed': return '付款失敗';
+      case 'refund': return '已退款';
+      default: return status;
+    }
+  };
+
   if (loading) {
     return (
       <div className="container-fluid">
@@ -314,6 +386,12 @@ function EventDetails() {
             onClick={() => navigate(`/events/${id}/guests`)}
           >
             參加者列表
+          </button>
+          <button 
+            className="btn btn-success me-2" 
+            onClick={handleShowOrders}
+          >
+            查看訂單
           </button>
           <button 
             className="btn btn-danger me-2" 
@@ -707,6 +785,271 @@ function EventDetails() {
           </div>
         </div>
       </div>
+
+      {/* Orders Overlay */}
+      {showOrdersOverlay && (
+        <div 
+          className="modal show d-block" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowOrdersOverlay(false);
+            }
+          }}
+        >
+          <div className="modal-dialog modal-xl">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-shopping-cart me-2"></i>
+                  訂單列表 - {event?.title}
+                </h5>
+                <button 
+                  type="button" 
+                  className="btn-close" 
+                  onClick={() => setShowOrdersOverlay(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {/* 統計資料 */}
+                <div className="row mb-4">
+                  <div className="col-md-3">
+                    <div className="card bg-primary text-white">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between">
+                          <div>
+                            <div className="text-white-50 small">總訂單</div>
+                            <div className="h4">{ordersStats.total_orders || 0}</div>
+                          </div>
+                          <div className="align-self-center">
+                            <i className="fas fa-shopping-cart fa-2x"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card bg-success text-white">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between">
+                          <div>
+                            <div className="text-white-50 small">已付款</div>
+                            <div className="h4">{ordersStats.paid || 0}</div>
+                          </div>
+                          <div className="align-self-center">
+                            <i className="fas fa-check-circle fa-2x"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card bg-warning text-white">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between">
+                          <div>
+                            <div className="text-white-50 small">待付款</div>
+                            <div className="h4">{ordersStats.pending || 0}</div>
+                          </div>
+                          <div className="align-self-center">
+                            <i className="fas fa-clock fa-2x"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="col-md-3">
+                    <div className="card bg-info text-white">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between">
+                          <div>
+                            <div className="text-white-50 small">總收入</div>
+                            <div className="h4">${ordersStats.total_revenue || 0}</div>
+                          </div>
+                          <div className="align-self-center">
+                            <i className="fas fa-dollar-sign fa-2x"></i>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 篩選器 */}
+                <div className="row mb-3">
+                  <div className="col-md-6">
+                    <div className="btn-group" role="group">
+                      <button 
+                        type="button" 
+                        className={`btn ${ordersStatusFilter === '' ? 'btn-primary' : 'btn-outline-primary'}`}
+                        onClick={() => handleOrdersStatusFilter('')}
+                      >
+                        全部
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`btn ${ordersStatusFilter === 'paid' ? 'btn-success' : 'btn-outline-success'}`}
+                        onClick={() => handleOrdersStatusFilter('paid')}
+                      >
+                        已付款
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`btn ${ordersStatusFilter === 'pending' ? 'btn-warning' : 'btn-outline-warning'}`}
+                        onClick={() => handleOrdersStatusFilter('pending')}
+                      >
+                        待付款
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`btn ${ordersStatusFilter === 'failed' ? 'btn-danger' : 'btn-outline-danger'}`}
+                        onClick={() => handleOrdersStatusFilter('failed')}
+                      >
+                        失敗
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 訂單列表 */}
+                {ordersLoading ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">載入中...</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table table-hover">
+                      <thead className="table-dark">
+                        <tr>
+                          <th>訂單ID</th>
+                          <th>用戶</th>
+                          <th>票券</th>
+                          <th>數量</th>
+                          <th>金額</th>
+                          <th>狀態</th>
+                          <th>付款時間</th>
+                          <th>操作</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map(order => (
+                          <tr key={order._id}>
+                            <td>
+                              <small className="text-muted">{order._id.slice(-8)}</small>
+                            </td>
+                            <td>
+                              <div>
+                                <div className="fw-bold">{order.user.name}</div>
+                                <small className="text-muted">{order.user.email}</small>
+                              </div>
+                            </td>
+                            <td>
+                              <div>
+                                <div className="fw-bold">{order.ticket.name}</div>
+                                <small className="text-muted">${order.ticket.cost}</small>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="badge bg-secondary">{order.quantity}</span>
+                            </td>
+                            <td>
+                              <strong>${order.amount}</strong>
+                              <div className="text-muted small">{order.currency}</div>
+                            </td>
+                            <td>
+                              <span className={getStatusBadgeClass(order.status)}>
+                                {getStatusText(order.status)}
+                              </span>
+                            </td>
+                            <td>
+                              <div>
+                                <div>{new Date(order.purchase_date).toLocaleDateString()}</div>
+                                <small className="text-muted">
+                                  {new Date(order.purchase_date).toLocaleTimeString()}
+                                </small>
+                              </div>
+                            </td>
+                            <td>
+                              {order.stripe_receipt_url && (
+                                <a 
+                                  href={order.stripe_receipt_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="btn btn-sm btn-outline-primary"
+                                >
+                                  <i className="fas fa-receipt"></i>
+                                </a>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                        {orders.length === 0 && (
+                          <tr>
+                            <td colSpan="8" className="text-center text-muted py-4">
+                              <i className="fas fa-inbox fa-3x mb-3"></i>
+                              <div>暫無訂單資料</div>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* 分頁 */}
+                {ordersPagination.pages > 1 && (
+                  <nav className="mt-4">
+                    <ul className="pagination justify-content-center">
+                      <li className={`page-item ${ordersPage === 1 ? 'disabled' : ''}`}>
+                        <button 
+                          className="page-link" 
+                          onClick={() => handleOrdersPageChange(ordersPage - 1)}
+                          disabled={ordersPage === 1}
+                        >
+                          上一頁
+                        </button>
+                      </li>
+                      {[...Array(ordersPagination.pages)].map((_, index) => {
+                        const page = index + 1;
+                        return (
+                          <li key={page} className={`page-item ${ordersPage === page ? 'active' : ''}`}>
+                            <button 
+                              className="page-link" 
+                              onClick={() => handleOrdersPageChange(page)}
+                            >
+                              {page}
+                            </button>
+                          </li>
+                        );
+                      })}
+                      <li className={`page-item ${ordersPage === ordersPagination.pages ? 'disabled' : ''}`}>
+                        <button 
+                          className="page-link" 
+                          onClick={() => handleOrdersPageChange(ordersPage + 1)}
+                          disabled={ordersPage === ordersPagination.pages}
+                        >
+                          下一頁
+                        </button>
+                      </li>
+                    </ul>
+                  </nav>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowOrdersOverlay(false)}
+                >
+                  關閉
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

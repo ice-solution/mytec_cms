@@ -66,7 +66,7 @@ const eventGuestController = {
       res.status(400).json({ error: err.message });
     }
   },
-  // 獲取當前用戶已訂閱的活動列表
+  // 獲取當前用戶已訂閱的活動列表 (需要認證 - 個人資料)
   getMySubscriptions: async (req, res) => {
     try {
       // 檢查認證
@@ -115,7 +115,7 @@ const eventGuestController = {
       res.status(400).json({ error: err.message });
     }
   },
-  // 檢查用戶是否已參加特定活動
+  // 檢查用戶是否已參加特定活動 (需要認證 - 個人資料)
   checkUserEventStatus: async (req, res) => {
     try {
       const { eventId } = req.params;

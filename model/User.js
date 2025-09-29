@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema({
   birth: Date,
   password: String,
   avatar: String,
+  role: { 
+    type: String, 
+    enum: ['user', 'organizer', 'admin'], 
+    default: 'user' 
+  },
   userFavourites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }]
 })
 

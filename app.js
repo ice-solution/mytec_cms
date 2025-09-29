@@ -10,6 +10,8 @@ import eventGuestRoute from './route/eventGuestRoute.js'
 import eventTicketRoute from './route/eventTicketRoute.js'
 import checkoutRoute from './route/checkoutRoute.js'
 import favoriteRoute from './route/favoriteRoute.js'
+import subscriptionRoute from './route/subscriptionRoute.js'
+import authRoute from './route/authRoute.js'
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
@@ -35,28 +37,9 @@ app.use(helmet({
 }));
 
 app.use(express.json())
-// CORS 配置
+// CORS 配置 - 允許所有來源
 const corsOptions = {
-  origin: function (origin, callback) {
-    // 允許的域名列表
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://localhost:3000',
-      'https://localhost:3001',
-      'https://mytec-api.sth-tech.com', // 替換為你的實際域名
-      'https://mytec-cms.sth-tech.com'
-    ];
-    
-    // 允許沒有 origin 的請求（例如同源請求）
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // 允許所有來源
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   credentials: true,
@@ -80,6 +63,8 @@ app.use('/api/event-guests', eventGuestRoute)
 app.use('/api/event-tickets', eventTicketRoute)
 app.use('/api/favorites', favoriteRoute)
 app.use('/api', checkoutRoute)
+app.use('/api/subscriptions', subscriptionRoute)
+app.use('/api/auth', authRoute)
 
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';

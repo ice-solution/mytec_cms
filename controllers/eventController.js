@@ -1,4 +1,7 @@
 import Event from '../model/Event.js'
+import Transaction from '../model/Transaction.js'
+import User from '../model/User.js'
+import EventTicket from '../model/EventTickets.js'
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 
@@ -27,7 +30,7 @@ const eventController = {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const total = await Event.countDocuments(filter);
       const events = await Event.find(filter)
-        .sort({ date: 1 })
+        .sort({ created_at: -1 })
         .skip(skip)
         .limit(parseInt(limit));
       res.json({
@@ -166,7 +169,7 @@ const eventController = {
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const total = await Event.countDocuments(filter);
       const events = await Event.find(filter)
-        .sort({ date: 1 })
+        .sort({ created_at: -1 })
         .skip(skip)
         .limit(parseInt(limit));
       res.json({
@@ -179,7 +182,7 @@ const eventController = {
       res.status(500).json({ error: err.message })
     }
   },
-  // 取得用戶自己創立的活動
+  // 取得用戶自己創立的活動 (需要認證 - 個人資料)
   getMyEvents: async (req, res) => {
     try {
       const auth = req.headers.authorization;
@@ -196,11 +199,145 @@ const eventController = {
       const userId = payload.id;
       // 只比較日期（yyyy-mm-dd），不比時間
       const today = new Date().toISOString().slice(0, 10);
-      const allEvents = await Event.find({ owner: userId }).sort({ date: 1 });
+      const allEvents = await Event.find({ owner: userId }).sort({ created_at: -1 });
       const upcoming = allEvents.filter(e => e.date.slice(0, 10) >= today);
       const past = allEvents.filter(e => e.date.slice(0, 10) < today);
       res.json({ upcoming, past });
     } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // 獲取特定事件的訂單列表
+  getEventOrders: async (req, res) => {
+    try {
+      const { eventId } = req.params;
+      const { page = 1, limit = 20, status } = req.query;
+
+      console.log('Getting orders for event:', eventId);
+
+      // 檢查事件是否存在
+      const event = await Event.findById(eventId);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+
+      // 建立查詢條件
+      const filter = { event: eventId };
+      if (status) {
+        filter.status = status;
+      }
+
+      console.log('Filter:', filter);
+
+      // 分頁設定
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      const total = await Transaction.countDocuments(filter);
+
+      console.log('Total transactions:', total);
+
+      // 獲取訂單列表，包含相關資料
+      const orders = await Transaction.find(filter)
+        .populate('user', 'first_name last_name email avatar')
+        .populate('event_ticket', 'ticket_name cost')
+        .sort({ created_at: -1 })
+        .skip(skip)
+        .limit(parseInt(limit));
+
+      console.log('Orders found:', orders.length);
+
+      // 格式化訂單資料
+      const formattedOrders = orders.map(order => ({
+        _id: order._id,
+        user: {
+          _id: order.user._id,
+          name: `${order.user.first_name} ${order.user.last_name}`,
+          email: order.user.email,
+          avatar: order.user.avatar
+        },
+        ticket: {
+          _id: order.event_ticket._id,
+          name: order.event_ticket.ticket_name,
+          cost: order.event_ticket.cost
+        },
+        quantity: order.quantity,
+        amount: order.amount,
+        currency: order.currency,
+        status: order.status,
+        purchase_date: order.purchase_date,
+        payment_method: order.payment_method,
+        stripe_receipt_url: order.stripe_receipt_url,
+        created_at: order.created_at
+      }));
+
+      // 計算統計資料
+      let stats = [];
+      try {
+        stats = await Transaction.aggregate([
+          { $match: { event: new mongoose.Types.ObjectId(eventId) } },
+          {
+            $group: {
+              _id: '$status',
+              count: { $sum: 1 },
+              total_amount: { $sum: '$amount' }
+            }
+          }
+        ]);
+        console.log('Stats:', stats);
+      } catch (statsError) {
+        console.error('Error calculating stats:', statsError);
+        // 如果統計計算失敗，使用簡單的查詢
+        const paidCount = await Transaction.countDocuments({ event: eventId, status: 'paid' });
+        const pendingCount = await Transaction.countDocuments({ event: eventId, status: 'pending' });
+        const failedCount = await Transaction.countDocuments({ event: eventId, status: 'failed' });
+        const refundCount = await Transaction.countDocuments({ event: eventId, status: 'refund' });
+        
+        const paidRevenue = await Transaction.aggregate([
+          { $match: { event: new mongoose.Types.ObjectId(eventId), status: 'paid' } },
+          { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
+        
+        stats = [
+          { _id: 'paid', count: paidCount, total_amount: paidRevenue[0]?.total || 0 },
+          { _id: 'pending', count: pendingCount, total_amount: 0 },
+          { _id: 'failed', count: failedCount, total_amount: 0 },
+          { _id: 'refund', count: refundCount, total_amount: 0 }
+        ];
+      }
+
+      const statusStats = {
+        total_orders: total,
+        total_revenue: 0,
+        pending: 0,
+        paid: 0,
+        failed: 0,
+        refund: 0
+      };
+
+      stats.forEach(stat => {
+        statusStats[stat._id] = stat.count;
+        if (stat._id === 'paid') {
+          statusStats.total_revenue = stat.total_amount;
+        }
+      });
+
+      res.json({
+        event: {
+          _id: event._id,
+          title: event.title,
+          date: event.date
+        },
+        orders: formattedOrders,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        },
+        stats: statusStats
+      });
+    } catch (err) {
+      console.error('Error in getEventOrders:', err);
       res.status(500).json({ error: err.message });
     }
   }

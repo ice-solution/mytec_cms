@@ -15,6 +15,7 @@ function Users() {
     birth: '',
     password: '',
     avatar: '',
+    role: 'user',
     _id: null
   });
   const [editing, setEditing] = useState(false);
@@ -93,7 +94,7 @@ function Users() {
         body: JSON.stringify(payload)
       });
     }
-    setForm({ first_name: '', last_name: '', country_code: '', phone: '', email: '', gender: '', birth: '', password: '', avatar: '', _id: null });
+    setForm({ first_name: '', last_name: '', country_code: '', phone: '', email: '', gender: '', birth: '', password: '', avatar: '', role: 'user', _id: null });
     setEditing(false);
     setAvatarFile(null);
     setAvatarPreview('');
@@ -149,6 +150,13 @@ function Users() {
         <div className="col-md-2 mt-2">
           <input type="password" className="form-control" name="password" placeholder="Password" value={form.password} onChange={handleChange} autoComplete="new-password" />
         </div>
+        <div className="col-md-2 mt-2">
+          <select className="form-control" name="role" value={form.role} onChange={handleChange}>
+            <option value="user">User</option>
+            <option value="organizer">Organizer</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
         <div className="col-md-3 mt-2">
           <input type="file" className="form-control" accept="image/jpeg,image/png" ref={fileInputRef} onChange={handleAvatarChange} />
           {avatarPreview && (
@@ -177,6 +185,7 @@ function Users() {
                   <th>Email</th>
                   <th>Gender</th>
                   <th>Birth</th>
+                  <th>Role</th>
                   <th>Avatar</th>
                   <th>Actions</th>
                 </tr>
@@ -192,6 +201,11 @@ function Users() {
                     <td>{user.email}</td>
                     <td>{user.gender}</td>
                     <td>{user.birth ? user.birth.slice(0, 10) : ''}</td>
+                    <td>
+                      <span className={`badge ${user.role === 'admin' ? 'bg-danger' : user.role === 'organizer' ? 'bg-warning' : 'bg-secondary'}`}>
+                        {user.role === 'admin' ? 'Admin' : user.role === 'organizer' ? 'Organizer' : 'User'}
+                      </span>
+                    </td>
                     <td>{user.avatar ? <img src={process.env.REACT_APP_API_URL + user.avatar} alt="avatar" width={32} height={32} style={{borderRadius: '50%'}} /> : ''}</td>
                     <td>
                       <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(user)}>Edit</button>

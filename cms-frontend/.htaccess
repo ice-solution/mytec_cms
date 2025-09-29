@@ -7,9 +7,8 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule . /index.html [L]
 
-# 強制 HTTPS（可選）
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# 強制 HTTPS（Cloudflare 處理）
+# 注意：HTTPS 重定向由 Cloudflare 處理，不需要在 Apache 中配置
 
 # 快取設定
 <IfModule mod_expires.c>
