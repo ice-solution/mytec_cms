@@ -38,20 +38,54 @@ function EventCreate() {
 
   // 取得所有分類
   const fetchCategories = async () => {
-    const res = await fetch(CATEGORY_API);
-    const data = await res.json();
-    setCategories(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(CATEGORY_API, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      } else {
+        console.error('Failed to fetch categories:', res.statusText);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories([]);
+    }
   };
 
   // 取得所有用戶
   const fetchUsers = async (search = '') => {
-    const res = await fetch(USER_API);
-    const data = await res.json();
-    setUsers(
-      search
-        ? data.filter(u => (((u.first_name || '') + ' ' + (u.last_name || '')).toLowerCase().includes(search.toLowerCase())))
-        : data
-    );
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(USER_API, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(
+          search
+            ? data.filter(u => (((u.first_name || '') + ' ' + (u.last_name || '')).toLowerCase().includes(search.toLowerCase())))
+            : data
+        );
+      } else {
+        console.error('Failed to fetch users:', res.statusText);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    }
   };
 
   useEffect(() => {
@@ -102,8 +136,12 @@ function EventCreate() {
     if (!eventImgFile) return form.event_img;
     const formData = new FormData();
     formData.append('event_img', eventImgFile);
+    const token = localStorage.getItem('token');
     const res = await fetch(UPLOAD_EVENT_IMG_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
     const data = await res.json();
@@ -115,8 +153,12 @@ function EventCreate() {
     if (!ogImgFile) return form.og_image;
     const formData = new FormData();
     formData.append('event_img', ogImgFile);
+    const token = localStorage.getItem('token');
     const res = await fetch(UPLOAD_EVENT_IMG_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
     const data = await res.json();
@@ -143,9 +185,13 @@ function EventCreate() {
         og_image: ogImgUrl
       };
       
+      const token = localStorage.getItem('token');
       const res = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       
@@ -238,7 +284,7 @@ function EventCreate() {
                     required
                   >
                     <option value="">選擇分類</option>
-                    {categories.map(cat => (
+                    {categories && Array.isArray(categories) && categories.map(cat => (
                       <option key={cat._id || cat.id} value={cat.name}>{cat.name}</option>
                     ))}
                   </select>
@@ -261,12 +307,12 @@ function EventCreate() {
                       className="form-control"
                       name="owner"
                       placeholder="搜尋主辦者"
-                      value={ownerSearch || (form.owner && users.find(u => u._id === form.owner) ? `${users.find(u => u._id === form.owner).first_name || ''} ${users.find(u => u._id === form.owner).last_name || ''}` : '')}
+                      value={ownerSearch || (form.owner && users && Array.isArray(users) && users.find(u => u._id === form.owner) ? `${users.find(u => u._id === form.owner).first_name || ''} ${users.find(u => u._id === form.owner).last_name || ''}` : '')}
                       onChange={handleOwnerSearch}
                       autoComplete="off"
                       required
                     />
-                    {ownerSearch && users.length > 0 && (
+                    {ownerSearch && users && Array.isArray(users) && users.length > 0 && (
                       <ul className="list-group position-absolute w-100" style={{ zIndex: 10 }}>
                         {users.map(u => (
                           <li

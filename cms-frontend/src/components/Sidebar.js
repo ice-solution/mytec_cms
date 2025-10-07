@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 function Sidebar() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
   return (
     <ul className="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
       {/* Sidebar - Brand */}
@@ -28,21 +36,39 @@ function Sidebar() {
           <i className="fas fa-calendar-alt"></i>
           <span>Events</span></Link>
       </li>
-      <li className="nav-item">
-        <Link className="nav-link" to="/categories">
-          <i className="fas fa-tags"></i>
-          <span>Categories</span></Link>
-      </li>
-      <li className="nav-item">
-        <Link className="nav-link" to="/users">
-          <i className="fas fa-user-friends"></i>
-          <span>Users</span></Link>
-      </li>
-      <li className="nav-item">
-        <Link className="nav-link" to="/subscriptions">
-          <i className="fas fa-mail-bulk"></i>
-          <span>Subscriptions</span></Link>
-      </li>
+      {/* 只有管理員可以看到分類管理 */}
+      {user && user.role === 'admin' && (
+        <li className="nav-item">
+          <Link className="nav-link" to="/categories">
+            <i className="fas fa-tags"></i>
+            <span>Categories</span></Link>
+        </li>
+      )}
+      
+      {/* 只有管理員可以看到用戶管理和角色管理 */}
+      {user && user.role === 'admin' && (
+        <>
+          <li className="nav-item">
+            <Link className="nav-link" to="/users">
+              <i className="fas fa-user-friends"></i>
+              <span>Users</span></Link>
+          </li>
+          <li className="nav-item">
+            <Link className="nav-link" to="/role-management">
+              <i className="fas fa-user-shield"></i>
+              <span>Role Management</span></Link>
+          </li>
+        </>
+      )}
+      
+      {/* 只有管理員可以看到訂閱管理 */}
+      {user && user.role === 'admin' && (
+        <li className="nav-item">
+          <Link className="nav-link" to="/subscriptions">
+            <i className="fas fa-mail-bulk"></i>
+            <span>Subscriptions</span></Link>
+        </li>
+      )}
       {/* Divider */}
       <hr className="sidebar-divider d-none d-md-block" />
     </ul>

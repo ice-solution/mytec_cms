@@ -13,24 +13,74 @@ function Events() {
 
   // 取得所有活動
   const fetchEvents = async () => {
-    const res = await fetch(API_URL);
-    const result = await res.json();
-    setEvents(result.data || []); // 只存陣列
-    // 你也可以存 result.total, result.page, result.limit 來做分頁
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const result = await res.json();
+        setEvents(result.data || []);
+      } else {
+        console.error('Failed to fetch events:', res.statusText);
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setEvents([]);
+    }
   };
 
   // 取得所有分類
   const fetchCategories = async () => {
-    const res = await fetch(CATEGORY_API);
-    const data = await res.json();
-    setCategories(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(CATEGORY_API, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      } else {
+        console.error('Failed to fetch categories:', res.statusText);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories([]);
+    }
   };
 
   // 取得所有用戶
   const fetchUsers = async () => {
-    const res = await fetch(USER_API);
-    const data = await res.json();
-    setUsers(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(USER_API, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      } else {
+        console.error('Failed to fetch users:', res.statusText);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    }
   };
 
   useEffect(() => {
@@ -46,7 +96,13 @@ function Events() {
     }
     
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/${id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) {
         throw new Error('Failed to delete event');
       }

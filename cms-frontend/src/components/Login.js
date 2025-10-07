@@ -132,8 +132,14 @@ function Login() {
               <div className="text-center mt-4">
                 <small className="text-muted">
                   <i className="fas fa-shield-alt me-1"></i>
-                  只有管理員可以登入此系統
+                  只有管理員和教練可以登入此系統
                 </small>
+                <div className="mt-2">
+                  <a href="/reset-password" className="text-decoration-none">
+                    <i className="fas fa-key me-1"></i>
+                    忘記密碼？
+                  </a>
+                </div>
               </div>
             </div>
           </div>

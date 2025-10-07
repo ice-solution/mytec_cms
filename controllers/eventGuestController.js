@@ -1,4 +1,6 @@
 import EventGuest from '../model/EventGuest.js'
+import Event from '../model/Event.js'
+import User from '../model/User.js'
 import jwt from 'jsonwebtoken';
 
 const eventGuestController = {
@@ -7,9 +9,35 @@ const eventGuestController = {
     try {
       const { event, user } = req.body;
       if (!event || !user) return res.status(400).json({ error: 'Missing event or user' });
+      
       // 檢查是否已參加
       const exist = await EventGuest.findOne({ event, user });
       if (exist) return res.status(400).json({ error: 'Already joined' });
+      
+      // 獲取事件信息
+      const eventData = await Event.findById(event);
+      if (!eventData) return res.status(404).json({ error: 'Event not found' });
+      
+      // 獲取用戶信息
+      const userData = await User.findById(user);
+      if (!userData) return res.status(404).json({ error: 'User not found' });
+      
+      // 檢查 member 參加同一個 coach 的活動次數限制
+      if (userData.role === 'member' && eventData.owner) {
+        const coachEventCount = await EventGuest.countDocuments({
+          user: user,
+          event: { $in: await Event.find({ owner: eventData.owner }).select('_id') }
+        });
+        
+        if (coachEventCount >= 2) {
+          return res.status(403).json({ 
+            error: 'Member can only join up to 2 events from the same coach',
+            coachEventCount: coachEventCount,
+            limit: 2
+          });
+        }
+      }
+      
       const guest = new EventGuest({ event, user });
       await guest.save();
       res.status(201).json(guest);
@@ -17,6 +45,55 @@ const eventGuestController = {
       res.status(400).json({ error: err.message });
     }
   },
+
+  // 檢查 member 參加同一個 coach 的活動次數
+  checkCoachEventLimit: async (req, res) => {
+    try {
+      const { userId, eventId } = req.params;
+      
+      // 獲取事件信息
+      const eventData = await Event.findById(eventId);
+      if (!eventData) return res.status(404).json({ error: 'Event not found' });
+      
+      // 獲取用戶信息
+      const userData = await User.findById(userId);
+      if (!userData) return res.status(404).json({ error: 'User not found' });
+      
+      // 只有 member 角色需要檢查限制
+      if (userData.role !== 'member') {
+        return res.json({
+          canJoin: true,
+          message: 'Non-member users have no restrictions',
+          userRole: userData.role
+        });
+      }
+      
+      // 計算該 member 參加同一個 coach 的活動次數
+      const coachEvents = await Event.find({ owner: eventData.owner }).select('_id');
+      const coachEventIds = coachEvents.map(event => event._id);
+      
+      const coachEventCount = await EventGuest.countDocuments({
+        user: userId,
+        event: { $in: coachEventIds }
+      });
+      
+      const canJoin = coachEventCount < 2;
+      
+      res.json({
+        canJoin: canJoin,
+        coachEventCount: coachEventCount,
+        limit: 2,
+        remaining: Math.max(0, 2 - coachEventCount),
+        coachId: eventData.owner,
+        message: canJoin 
+          ? `You can join this event. You have joined ${coachEventCount}/2 events from this coach.`
+          : `You have reached the limit of 2 events from this coach.`
+      });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  },
+
   // 查詢某活動的所有參加者
   getEventGuests: async (req, res) => {
     try {

@@ -171,8 +171,12 @@ function EventDetails() {
     if (!eventImgFile) return event.event_img;
     const formData = new FormData();
     formData.append('event_img', eventImgFile);
+    const token = localStorage.getItem('token');
     const res = await fetch(UPLOAD_EVENT_IMG_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
     const data = await res.json();
@@ -184,8 +188,12 @@ function EventDetails() {
     if (!ogImgFile) return event.og_image;
     const formData = new FormData();
     formData.append('event_img', ogImgFile);
+    const token = localStorage.getItem('token');
     const res = await fetch(UPLOAD_EVENT_IMG_URL, {
       method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
       body: formData
     });
     const data = await res.json();
@@ -212,9 +220,13 @@ function EventDetails() {
         og_image: ogImgUrl
       };
       
+      const token = localStorage.getItem('token');
       const res = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       
@@ -239,7 +251,13 @@ function EventDetails() {
     }
     
     try {
-      const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/${id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) {
         throw new Error('Failed to delete event');
       }

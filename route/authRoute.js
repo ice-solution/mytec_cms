@@ -9,4 +9,8 @@ router.post('/logout', authController.logout);
 router.get('/verify', authController.verifyToken);
 router.get('/me', authController.getCurrentUser);
 
+// 重置密碼路由
+router.post('/check-user', authController.checkUserExists);
+router.post('/reset-password', authController.resetPassword);
+
 export default router;

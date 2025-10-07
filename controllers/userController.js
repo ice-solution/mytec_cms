@@ -199,6 +199,91 @@ const userController = {
     // 若用 httpOnly cookie，這裡可 res.clearCookie('token')
     // 這裡回傳訊息，前端收到後自行清除 localStorage/sessionStorage 的 JWT
     res.json({ message: 'Logout success, token removed on client.' });
+  },
+
+  // 獲取所有用戶（僅管理員）
+  getAllUsersWithRoles: async (req, res) => {
+    try {
+      const users = await User.find({}, { password: 0 }).sort({ role: 1, first_name: 1 });
+      res.json(users);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // 修改用戶角色（僅管理員）
+  changeUserRole: async (req, res) => {
+    try {
+      const { targetUserId, newRole } = req.body;
+      const currentUser = req.user;
+
+      // 檢查目標用戶是否存在
+      const targetUser = await User.findById(targetUserId);
+      if (!targetUser) {
+        return res.status(404).json({ message: '目標用戶不存在' });
+      }
+
+      // 檢查新角色是否有效
+      const validRoles = ['member', 'coach', 'admin'];
+      if (!validRoles.includes(newRole)) {
+        return res.status(400).json({ 
+          message: '無效的角色，只允許: member, coach, admin' 
+        });
+      }
+
+      // 防止管理員修改自己的角色
+      if (targetUserId === currentUser._id.toString()) {
+        return res.status(400).json({ 
+          message: '不能修改自己的角色' 
+        });
+      }
+
+      // 更新用戶角色
+      targetUser.role = newRole;
+      await targetUser.save();
+
+      res.json({ 
+        message: '用戶角色更新成功',
+        user: {
+          _id: targetUser._id,
+          first_name: targetUser.first_name,
+          last_name: targetUser.last_name,
+          email: targetUser.email,
+          role: targetUser.role
+        }
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+
+  // 獲取用戶角色統計
+  getRoleStats: async (req, res) => {
+    try {
+      const stats = await User.aggregate([
+        {
+          $group: {
+            _id: '$role',
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+      
+      const roleStats = {
+        total: await User.countDocuments(),
+        member: 0,
+        coach: 0,
+        admin: 0
+      };
+
+      stats.forEach(stat => {
+        roleStats[stat._id] = stat.count;
+      });
+
+      res.json(roleStats);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
   }
 }
 

@@ -12,8 +12,8 @@ const userSchema = new mongoose.Schema({
   avatar: String,
   role: { 
     type: String, 
-    enum: ['user', 'organizer', 'admin'], 
-    default: 'user' 
+    enum: ['member', 'coach', 'admin'], 
+    default: 'member' 
   },
   userFavourites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }]
 })

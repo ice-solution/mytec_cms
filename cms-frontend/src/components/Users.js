@@ -15,7 +15,7 @@ function Users() {
     birth: '',
     password: '',
     avatar: '',
-    role: 'user',
+    role: 'member',
     _id: null
   });
   const [editing, setEditing] = useState(false);
@@ -25,9 +25,26 @@ function Users() {
 
   // 取得所有用戶
   const fetchUsers = async () => {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-    setUsers(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_URL, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setUsers(data);
+      } else {
+        console.error('Failed to fetch users:', res.statusText);
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      setUsers([]);
+    }
   };
 
   useEffect(() => {
@@ -152,8 +169,8 @@ function Users() {
         </div>
         <div className="col-md-2 mt-2">
           <select className="form-control" name="role" value={form.role} onChange={handleChange}>
-            <option value="user">User</option>
-            <option value="organizer">Organizer</option>
+            <option value="member">Member</option>
+            <option value="coach">Coach</option>
             <option value="admin">Admin</option>
           </select>
         </div>
@@ -202,8 +219,8 @@ function Users() {
                     <td>{user.gender}</td>
                     <td>{user.birth ? user.birth.slice(0, 10) : ''}</td>
                     <td>
-                      <span className={`badge ${user.role === 'admin' ? 'bg-danger' : user.role === 'organizer' ? 'bg-warning' : 'bg-secondary'}`}>
-                        {user.role === 'admin' ? 'Admin' : user.role === 'organizer' ? 'Organizer' : 'User'}
+                      <span className={`badge ${user.role === 'admin' ? 'bg-danger' : user.role === 'coach' ? 'bg-warning' : 'bg-secondary'}`}>
+                        {user.role === 'admin' ? 'Admin' : user.role === 'coach' ? 'Coach' : 'Member'}
                       </span>
                     </td>
                     <td>{user.avatar ? <img src={process.env.REACT_APP_API_URL + user.avatar} alt="avatar" width={32} height={32} style={{borderRadius: '50%'}} /> : ''}</td>

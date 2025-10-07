@@ -25,7 +25,16 @@ function ProtectedRoute({ children }) {
         });
 
         if (response.ok) {
-          setIsAuthenticated(true);
+          const data = await response.json();
+          // 檢查用戶角色，只允許 admin 和 coach
+          if (data.user && (data.user.role === 'admin' || data.user.role === 'coach')) {
+            setIsAuthenticated(true);
+          } else {
+            // 角色不符合要求，清除本地儲存
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setIsAuthenticated(false);
+          }
         } else {
           // Token 無效，清除本地儲存
           localStorage.removeItem('token');

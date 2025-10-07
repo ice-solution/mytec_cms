@@ -6,12 +6,38 @@ function Categories() {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState({ name: '', slug: '', display: true, _id: null });
   const [editing, setEditing] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // 檢查用戶權限
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
 
   // 取得所有分類（包含 display: false）
   const fetchCategories = async () => {
-    const res = await fetch(API_URL + '?all=1'); // 用 query 參數讓後端回傳全部
-    const data = await res.json();
-    setCategories(data);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(API_URL + '?all=1', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data);
+      } else {
+        console.error('Failed to fetch categories:', res.statusText);
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      setCategories([]);
+    }
   };
 
   useEffect(() => {
@@ -27,22 +53,40 @@ function Categories() {
   // 新增或更新分類
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (editing) {
-      await fetch(`${API_URL}/${form._id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-    } else {
-      await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
+    try {
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      if (editing) {
+        const res = await fetch(`${API_URL}/${form._id}`, {
+          method: 'PUT',
+          headers,
+          body: JSON.stringify(form)
+        });
+        if (!res.ok) {
+          console.error('Failed to update category:', res.statusText);
+          return;
+        }
+      } else {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(form)
+        });
+        if (!res.ok) {
+          console.error('Failed to create category:', res.statusText);
+          return;
+        }
+      }
+      setForm({ name: '', slug: '', display: true, _id: null });
+      setEditing(false);
+      fetchCategories();
+    } catch (error) {
+      console.error('Error saving category:', error);
     }
-    setForm({ name: '', slug: '', display: true, _id: null });
-    setEditing(false);
-    fetchCategories();
   };
 
   // 編輯分類
@@ -53,25 +97,64 @@ function Categories() {
 
   // 刪除分類
   const handleDelete = async (id) => {
-    await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-    fetchCategories();
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (res.ok) {
+        fetchCategories();
+      } else {
+        console.error('Failed to delete category:', res.statusText);
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
   };
 
   // 切換 display toggle
   const handleToggleDisplay = async (cat) => {
-    await fetch(`${API_URL}/${cat._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...cat, display: !cat.display })
-    });
-    fetchCategories();
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/${cat._id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ...cat, display: !cat.display })
+      });
+      
+      if (res.ok) {
+        fetchCategories();
+      } else {
+        console.error('Failed to toggle category display:', res.statusText);
+      }
+    } catch (error) {
+      console.error('Error toggling category display:', error);
+    }
   };
 
   return (
     <div className="container-fluid">
       <h1 className="h3 mb-4 text-gray-800">Categories</h1>
-      {/* Category Form */}
-      <form onSubmit={handleSubmit} className="mb-4 row g-2 align-items-end">
+      
+      {/* 權限提示 */}
+      {user && user.role !== 'admin' && (
+        <div className="alert alert-info">
+          <i className="fas fa-info-circle me-2"></i>
+          您只能查看分類，無法修改。只有管理員可以管理分類。
+        </div>
+      )}
+      
+      {/* Category Form - 只有管理員可以看到 */}
+      {user && user.role === 'admin' && (
+        <form onSubmit={handleSubmit} className="mb-4 row g-2 align-items-end">
         <div className="col-md-3">
           <label className="form-label">分類名稱 *</label>
           <input 
@@ -113,7 +196,8 @@ function Categories() {
         <div className="col-md-2">
           <button type="submit" className="btn btn-primary w-100">{editing ? 'Update' : 'Add'}</button>
         </div>
-      </form>
+        </form>
+      )}
       {/* Category Table */}
       <div className="card shadow mb-4">
         <div className="card-header py-3">
@@ -144,11 +228,23 @@ function Categories() {
                       <small className="text-info">/events/{cat.slug}</small>
                     </td>
                     <td>
-                      <input type="checkbox" checked={cat.display} onChange={() => handleToggleDisplay(cat)} />
+                      {user && user.role === 'admin' ? (
+                        <input type="checkbox" checked={cat.display} onChange={() => handleToggleDisplay(cat)} />
+                      ) : (
+                        <span className={`badge ${cat.display ? 'bg-success' : 'bg-secondary'}`}>
+                          {cat.display ? '啟用' : '停用'}
+                        </span>
+                      )}
                     </td>
                     <td>
-                      <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(cat)}>Edit</button>
-                      <button className="btn btn-sm btn-danger" onClick={() => handleDelete(cat._id)}>Delete</button>
+                      {user && user.role === 'admin' ? (
+                        <>
+                          <button className="btn btn-sm btn-warning me-2" onClick={() => handleEdit(cat)}>Edit</button>
+                          <button className="btn btn-sm btn-danger" onClick={() => handleDelete(cat._id)}>Delete</button>
+                        </>
+                      ) : (
+                        <span className="text-muted">只讀</span>
+                      )}
                     </td>
                   </tr>
                 ))}

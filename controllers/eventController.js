@@ -10,6 +10,15 @@ const eventController = {
     try {
       const { categories, page = 1, limit = 10, list, date } = req.query;
       const filter = {};
+      
+      // 權限控制：根據用戶角色過濾事件
+      const user = req.user; // 從中間件獲取用戶信息（可能為空）
+      if (user && user.role === 'coach') {
+        // Coach 只能看到自己創建的事件
+        filter.owner = user._id;
+      }
+      // 如果沒有用戶信息（公開訪問）或 Admin，可以看到所有事件
+      
       // 支援 categories=music,game,wine
       if (categories) {
         const arr = categories.split(',').map(s => s.trim());
@@ -133,11 +142,17 @@ const eventController = {
   },
   createEvent: async (req, res) => {
     try {
-      const event = new Event(req.body)
-      await event.save()
-      res.status(201).json(event)
+      // 確保事件有 owner 字段，如果沒有則設置為當前用戶
+      const eventData = { ...req.body };
+      if (!eventData.owner && req.user) {
+        eventData.owner = req.user._id;
+      }
+      
+      const event = new Event(eventData);
+      await event.save();
+      res.status(201).json(event);
     } catch (err) {
-      res.status(400).json({ error: err.message })
+      res.status(400).json({ error: err.message });
     }
   },
   updateEvent: async (req, res) => {

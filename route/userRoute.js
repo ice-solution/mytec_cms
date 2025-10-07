@@ -1,5 +1,6 @@
 import express from 'express'
 import userController from '../controllers/userController.js'
+import { requireAdmin, requireAuth, canChangeRole } from '../middleware/roleAuth.js'
 import multer from 'multer'
 import path from 'path'
 
@@ -48,5 +49,10 @@ router.post('/logout', userController.logoutUser)
 router.post('/favourites/:event_id', userController.addFavourite)
 // 取消收藏活動
 router.delete('/favourites/:event_id', userController.removeFavourite)
+
+// 角色管理相關路由（僅管理員）
+router.get('/admin/all', requireAdmin, userController.getAllUsersWithRoles)
+router.get('/admin/stats', requireAdmin, userController.getRoleStats)
+router.put('/admin/change-role', requireAdmin, canChangeRole, userController.changeUserRole)
 
 export default router 

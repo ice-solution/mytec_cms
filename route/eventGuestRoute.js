@@ -5,6 +5,8 @@ const router = express.Router()
 
 // 用戶參加活動
 router.post('/join', eventGuestController.joinEvent)
+// 檢查 member 參加同一個 coach 的活動次數限制
+router.get('/check-coach-limit/:userId/:eventId', eventGuestController.checkCoachEventLimit)
 // 用戶簽到
 router.post('/:userId/checkin/:eventId', eventGuestController.checkin)
 // 獲取當前用戶已訂閱的活動列表
